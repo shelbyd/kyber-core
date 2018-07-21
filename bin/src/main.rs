@@ -3,40 +3,55 @@ extern crate failure;
 #[macro_use]
 extern crate structopt;
 
+use failure::Error;
 use std::str::FromStr;
 use structopt::StructOpt;
+
+mod plugin;
+mod plugin_locator;
+
+use plugin::PluginAction;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "kyber")]
 enum Arguments {
     #[structopt(name = "options")]
-    Options {
-        filename: String,
-        location: Location,
-    },
+    Options(Options),
 
     #[structopt(name = "do")]
     Do {
         action: PluginAction,
         filename: String,
-        location: Location,
+        line_col: LineCol,
     },
 }
 
+#[derive(StructOpt, Debug)]
+struct Options {
+    filename: String,
+    line_col: LineCol,
+}
+
 #[derive(Debug)]
-struct Location {
+pub struct LineCol {
     line: usize,
     column: usize,
 }
 
-impl FromStr for Location {
+impl LineCol {
+    fn to_string(&self) -> String {
+        format!("{}:{}", self.line, self.column)
+    }
+}
+
+impl FromStr for LineCol {
     type Err = failure::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut split = s.split(":");
 
         match (split.next(), split.next(), split.next()) {
-            (Some(line), Some(column), None) => Ok(Location {
+            (Some(line), Some(column), None) => Ok(LineCol {
                 line: line.parse()?,
                 column: column.parse()?,
             }),
@@ -45,59 +60,34 @@ impl FromStr for Location {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-struct PluginAction {
-    plugin_name: String,
-    action_name: String,
-}
-
-impl FromStr for PluginAction {
-    type Err = failure::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split("/");
-
-        match (split.next(), split.next(), split.next()) {
-            (Some(plugin), Some(action), None) => Ok(PluginAction {
-                plugin_name: plugin.to_string(),
-                action_name: action.to_string(),
-            }),
-            _ => bail!("Invalid plugin action '{}'", s),
-        }
-    }
-}
-
 fn main() {
-    let arguments = Arguments::from_args();
-    println!("{:?}", arguments);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn plugin_action(p: &str, a: &str) -> PluginAction {
-        PluginAction {
-            plugin_name: String::from(p),
-            action_name: String::from(a),
+    match run() {
+        Ok(()) => {}
+        Err(e) => {
+            println!("{}", e);
+            std::process::exit(1)
         }
     }
+}
 
-    #[test]
-    fn action_from_str() {
-        assert_eq!(
-            PluginAction::from_str("foo/bar").unwrap(),
-            plugin_action("foo", "bar")
-        );
-        assert_eq!(
-            PluginAction::from_str("foo-bar/baz").unwrap(),
-            plugin_action("foo-bar", "baz")
-        );
-        assert_eq!(
-            PluginAction::from_str("foo/baz-qux").unwrap(),
-            plugin_action("foo", "baz-qux")
-        );
-        assert!(PluginAction::from_str("foo/bar/baz").is_err());
-        assert!(PluginAction::from_str("foo").is_err());
+fn run() -> Result<(), Error> {
+    let arguments = Arguments::from_args();
+    match arguments {
+        Arguments::Options(options) => {
+            let actions = get_actions(&options)?;
+            for action in actions {
+                println!("{}", action);
+            }
+        }
+        Arguments::Do { .. } => {}
     }
+
+    Ok(())
+}
+
+fn get_actions(options: &Options) -> Result<Vec<PluginAction>, Error> {
+    Ok(plugin_locator::path_exes()?
+        .into_iter()
+        .flat_map(|plugin| plugin.actions(&options.filename, &options.line_col))
+        .collect::<Vec<_>>())
 }
