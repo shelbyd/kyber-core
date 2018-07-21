@@ -1,6 +1,8 @@
 [package]
-name = "kyber-lib"
+name = "kyber_support"
 version = "0.1.0"
 authors = ["Shelby Doolittle <shelby@shelbyd.com>"]
 
 [dependencies]
+failure = "*"
+structopt = "*"
