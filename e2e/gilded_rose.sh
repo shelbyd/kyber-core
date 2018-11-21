@@ -32,6 +32,7 @@ function apply_basic_fixes() {
 }
 
 function kyber_commands() {
+  kyber "do" extract_variable src/main.rs 53,12:53,19
 }
 
 function kyber() {

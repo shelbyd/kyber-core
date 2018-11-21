@@ -5,4 +5,5 @@ authors = ["Shelby Doolittle <shelby@shelbyd.com>"]
 
 [dependencies]
 failure = "*"
+regex = "*"
 structopt = "*"
