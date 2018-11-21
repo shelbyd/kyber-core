@@ -34,6 +34,8 @@ function apply_basic_fixes() {
 function kyber_refactor() {
   kyber "do" extract_variable src/main.rs 53,12:53,19 item
   sed -i "s/let item = items\\[i\\];/let mut item = \\&mut items[i];/" src/main.rs
+
+  kyber "do" extract_function src/main.rs 54,9:100,9 update_item
 }
 
 function kyber() {
