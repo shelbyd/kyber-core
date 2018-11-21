@@ -39,14 +39,11 @@ fn main() -> Result<(), Error> {
 
     let new_content = if &options.name == "extract_variable" {
         let expression = range_content;
-        let mut lines = contents
-            .split("\n")
-            .map(|l| l.replace(&expression, &options.new_var))
-            .collect::<Vec<_>>();
+        let variable_declaration = format!("let {} = {};", &options.new_var, expression);
 
-        let new_line = format!("let {} = {};", &options.new_var, expression);
-
-        lines.insert(start_line, new_line);
+        let new_content = contents.replace(&expression, &options.new_var);
+        let mut lines = new_content.split("\n").collect::<Vec<_>>();
+        lines.insert(start_line, &variable_declaration);
         lines.join("\n")
     } else if &options.name == "extract_function" {
         let function_call = format!("{}();", &options.new_var);
@@ -76,10 +73,8 @@ fn extract_range(
         if line == 0 {
             Ok(0)
         } else {
-            Ok(text
-                .match_indices("\n")
-                .skip(line - 1)
-                .next()
+            let nth_newline = text.match_indices("\n").skip(line - 1).next();
+            Ok(nth_newline
                 .ok_or(format_err!("Line {} out of range", line))?
                 .0
                 + 1)
