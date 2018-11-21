@@ -20,9 +20,23 @@ kyber do rust-refactoring/rename src/main.rs 3:7
 # Needs argument (rename to): bar
 ```
 
-Before `rs fn main() { let foo = "foo"; println!("foo is: {}", foo); }`
+Before
 
-After `rs fn main() { let bar = "foo"; println!("foo is: {}", bar); }`
+```rs
+fn main() {
+  let foo = "foo";
+  println!("foo is: {}", foo);
+}
+```
+
+After
+
+```rs
+fn main() {
+  let bar = "foo";
+  println!("foo is: {}", bar);
+}
+```
 
 ## Editor integration
 

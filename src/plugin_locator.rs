@@ -1,11 +1,12 @@
 use failure::Error;
-use plugin::{Plugin, PathExePlugin};
+use plugin::{PathExePlugin, Plugin};
 use std::env;
 use std::fs;
 
 pub fn path_exes() -> Result<Vec<Box<dyn Plugin>>, Error> {
     let path = env::var("PATH")?;
-    let path_exes = path.split(":")
+    let path_exes = path
+        .split(":")
         .filter_map(|dir| fs::read_dir(dir).ok())
         .flat_map(|x| x)
         .filter_map(|dir_entry| dir_entry.ok())
