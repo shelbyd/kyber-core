@@ -5,5 +5,4 @@ authors = ["Shelby Doolittle <shelby@shelbyd.com>"]
 
 [dependencies]
 failure = "*"
-kyber_support = { path = "../lib" }
 structopt = "*"
