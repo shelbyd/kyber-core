@@ -13,6 +13,7 @@ struct Options {
     _name: String,
     filename: String,
     range: String,
+    new_var: String,
 }
 
 fn main() -> Result<(), Error> {
@@ -33,8 +34,6 @@ fn main() -> Result<(), Error> {
     let _end_line = captures[3].parse::<usize>()? - 1;
     let end_col = captures[4].parse::<usize>()? - 1;
 
-    let new_var = "item";
-
     let contents = {
         let mut lines = contents
             .split("\n")
@@ -48,10 +47,10 @@ fn main() -> Result<(), Error> {
 
         let mut lines = lines
             .into_iter()
-            .map(|l| l.replace(&to_replace, new_var))
+            .map(|l| l.replace(&to_replace, &options.new_var))
             .collect::<Vec<_>>();
 
-        let new_line = format!("let {} = {};", new_var, to_replace);
+        let new_line = format!("let {} = {};", &options.new_var, to_replace);
 
         lines.insert(start_line, new_line);
         lines.join("\n")

@@ -31,12 +31,14 @@ function apply_basic_fixes() {
   cargo fmt
 }
 
-function kyber_commands() {
-  kyber "do" extract_variable src/main.rs 53,12:53,19
+function kyber_refactor() {
+  kyber "do" extract_variable src/main.rs 53,12:53,19 item
+  sed -i "s/let item = items\\[i\\];/let mut item = \\&mut items[i];/" src/main.rs
 }
 
 function kyber() {
   cargo run --manifest-path $PROJECT_DIR/Cargo.toml -- $@
+  cargo fmt
 }
 
 mkdir -p $TARGET_DIR
@@ -45,4 +47,4 @@ cd $TARGET_DIR
 clone_git_repo
 apply_basic_fixes
 
-kyber_commands
+kyber_refactor
