@@ -52,6 +52,12 @@ fn main() -> Result<(), Error> {
         let old_name = range_content;
         let new_name = &options.new_var;
         contents.replace(old_name, new_name)
+    } else if &options.name == "inline_variable" {
+        let variable_name = range_content;
+        let expression_matcher = regex::Regex::new(&format!("let {} = (?P<expr>.+);", variable_name))?;
+        let expression = &expression_matcher.captures(&contents).unwrap()["expr"];
+        let new_content = expression_matcher.replace(&contents, "");
+        new_content.replace(variable_name, expression)
     } else {
         bail!("Unrecognized refactoring {:?}", &options.name);
     };
