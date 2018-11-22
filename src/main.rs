@@ -53,6 +53,10 @@ fn main() -> Result<(), Error> {
         let mut lines = new_content.split("\n").collect::<Vec<_>>();
         lines.insert(start_line, &function_declaration);
         lines.join("\n")
+    } else if &options.name == "rename_variable" {
+        let old_name = range_content;
+        let new_name = &options.new_var;
+        contents.replace(old_name, new_name)
     } else {
         bail!("Unrecognized refactoring {:?}", &options.name);
     };
