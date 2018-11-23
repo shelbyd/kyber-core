@@ -13,7 +13,6 @@ use structopt::StructOpt;
 
 #[derive(StructOpt)]
 struct Options {
-    _should_do: String,
     #[structopt(short = "f", long = "file")]
     filename: String,
     #[structopt(long = "range")]
