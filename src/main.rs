@@ -14,10 +14,25 @@ use structopt::StructOpt;
 #[derive(StructOpt)]
 struct Options {
     _should_do: String,
-    name: String,
+    #[structopt(short = "f", long = "file")]
     filename: String,
+    #[structopt(long = "range")]
     range: String,
+
+    refactor: String,
     new_var: String,
+}
+
+#[derive(StructOpt)]
+enum Refactor {
+    #[structopt(name = "extract_variable")]
+    ExtractVariable { new_name: String },
+    #[structopt(name = "extract_function")]
+    ExtractFunction { new_name: String },
+    #[structopt(name = "rename_variable")]
+    RenameVariable { new_name: String },
+    #[structopt(name = "inline_variable")]
+    InlineVariable,
 }
 
 fn main() -> Result<(), Error> {
@@ -32,7 +47,7 @@ fn main() -> Result<(), Error> {
     let (start, end) = parse_range(&options.range)?;
     let range_content = get(&contents, start..=end)?;
 
-    let new_content = if &options.name == "extract_variable" {
+    let new_content = if &options.refactor == "extract_variable" {
         let expression = range_content;
         let variable_declaration = format!("let {} = {};", &options.new_var, expression);
 
@@ -40,7 +55,7 @@ fn main() -> Result<(), Error> {
         let mut lines = new_content.split("\n").collect::<Vec<_>>();
         lines.insert(start.line, &variable_declaration);
         lines.join("\n")
-    } else if &options.name == "extract_function" {
+    } else if &options.refactor == "extract_function" {
         let function_call = format!("{}();", &options.new_var);
         let function_declaration = format!("fn {}() {{\n{}\n}}", &options.new_var, range_content);
 
@@ -48,18 +63,19 @@ fn main() -> Result<(), Error> {
         let mut lines = new_content.split("\n").collect::<Vec<_>>();
         lines.insert(start.line, &function_declaration);
         lines.join("\n")
-    } else if &options.name == "rename_variable" {
+    } else if &options.refactor == "rename_variable" {
         let old_name = range_content;
         let new_name = &options.new_var;
         contents.replace(old_name, new_name)
-    } else if &options.name == "inline_variable" {
+    } else if &options.refactor == "inline_variable" {
         let variable_name = range_content;
-        let expression_matcher = regex::Regex::new(&format!("let {} = (?P<expr>.+);", variable_name))?;
+        let expression_matcher =
+            regex::Regex::new(&format!("let {} = (?P<expr>.+);", variable_name))?;
         let expression = &expression_matcher.captures(&contents).unwrap()["expr"];
         let new_content = expression_matcher.replace(&contents, "");
         new_content.replace(variable_name, expression)
     } else {
-        bail!("Unrecognized refactoring {:?}", &options.name);
+        bail!("Unrecognized refactoring {:?}", &options.refactor);
     };
 
     File::create(&options.filename)?.write_all(new_content.as_bytes())?;
