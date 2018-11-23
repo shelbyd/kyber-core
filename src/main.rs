@@ -19,8 +19,8 @@ struct Options {
     #[structopt(long = "range")]
     range: String,
 
-    refactor: String,
-    new_var: String,
+    #[structopt(subcommand)]
+    refactor2: Refactor,
 }
 
 #[derive(StructOpt)]
@@ -47,35 +47,37 @@ fn main() -> Result<(), Error> {
     let (start, end) = parse_range(&options.range)?;
     let range_content = get(&contents, start..=end)?;
 
-    let new_content = if &options.refactor == "extract_variable" {
-        let expression = range_content;
-        let variable_declaration = format!("let {} = {};", &options.new_var, expression);
+    let new_content = match &options.refactor2 {
+        Refactor::ExtractVariable { new_name } => {
+            let expression = range_content;
+            let variable_declaration = format!("let {} = {};", new_name, expression);
 
-        let new_content = contents.replace(&expression, &options.new_var);
-        let mut lines = new_content.split("\n").collect::<Vec<_>>();
-        lines.insert(start.line, &variable_declaration);
-        lines.join("\n")
-    } else if &options.refactor == "extract_function" {
-        let function_call = format!("{}();", &options.new_var);
-        let function_declaration = format!("fn {}() {{\n{}\n}}", &options.new_var, range_content);
+            let new_content = contents.replace(&expression, new_name);
+            let mut lines = new_content.split("\n").collect::<Vec<_>>();
+            lines.insert(start.line, &variable_declaration);
+            lines.join("\n")
+        }
+        Refactor::ExtractFunction { new_name } => {
+            let function_call = format!("{}();", new_name);
+            let function_declaration = format!("fn {}() {{\n{}\n}}", new_name, range_content);
 
-        let new_content = contents.replace(range_content, &function_call);
-        let mut lines = new_content.split("\n").collect::<Vec<_>>();
-        lines.insert(start.line, &function_declaration);
-        lines.join("\n")
-    } else if &options.refactor == "rename_variable" {
-        let old_name = range_content;
-        let new_name = &options.new_var;
-        contents.replace(old_name, new_name)
-    } else if &options.refactor == "inline_variable" {
-        let variable_name = range_content;
-        let expression_matcher =
-            regex::Regex::new(&format!("let {} = (?P<expr>.+);", variable_name))?;
-        let expression = &expression_matcher.captures(&contents).unwrap()["expr"];
-        let new_content = expression_matcher.replace(&contents, "");
-        new_content.replace(variable_name, expression)
-    } else {
-        bail!("Unrecognized refactoring {:?}", &options.refactor);
+            let new_content = contents.replace(range_content, &function_call);
+            let mut lines = new_content.split("\n").collect::<Vec<_>>();
+            lines.insert(start.line, &function_declaration);
+            lines.join("\n")
+        }
+        Refactor::RenameVariable { new_name } => {
+            let old_name = range_content;
+            contents.replace(old_name, new_name)
+        }
+        Refactor::InlineVariable => {
+            let variable_name = range_content;
+            let expression_matcher =
+                regex::Regex::new(&format!("let {} = (?P<expr>.+);", variable_name))?;
+            let expression = &expression_matcher.captures(&contents).unwrap()["expr"];
+            let new_content = expression_matcher.replace(&contents, "");
+            new_content.replace(variable_name, expression)
+        }
     };
 
     File::create(&options.filename)?.write_all(new_content.as_bytes())?;
