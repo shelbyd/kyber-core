@@ -8,12 +8,13 @@ mod file_location;
 mod replace_range;
 
 use self::containing_scope::*;
-use self::file_location::{get, parse_range};
+use self::file_location::{get, parse_range, FileLocation};
 use self::replace_range::*;
 
 use failure::Error;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::ops::RangeInclusive;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -49,6 +50,7 @@ fn main() -> Result<(), Error> {
     };
 
     let (start, end) = parse_range(&options.range)?;
+
     let range_content = get(&contents, start..=end)?;
 
     let new_content = match &options.refactor {
@@ -71,26 +73,37 @@ fn main() -> Result<(), Error> {
             lines.join("\n")
         }
         Refactor::RenameVariable { new_name } => {
-            let start_index = start.index(&contents)?;
-            let end_index = end.index(&contents)?;
-            let input_range = start_index..(end_index + 1);
-            contents
-                .replace_range(containing_scope(&contents, input_range), |s| {
-                    s.replace(range_content, new_name)
-                })
-                .unwrap()
+            replace_containing_scope(&contents, start..=end, |s| {
+                s.replace(range_content, new_name)
+            })?
         }
         Refactor::InlineVariable => {
             let variable_name = range_content;
             let expression_matcher =
                 regex::Regex::new(&format!("let {} = (?P<expr>.+);", variable_name))?;
-            let expression = &expression_matcher.captures(&contents).unwrap()["expr"];
-            let new_content = expression_matcher.replace(&contents, "");
-            new_content.replace(variable_name, expression)
+            replace_containing_scope(&contents, start..=end, |s| {
+                let expression = &expression_matcher.captures(&s).unwrap()["expr"];
+                expression_matcher
+                    .replace(&s, "")
+                    .replace(variable_name, expression)
+            })?
         }
     };
 
     File::create(&options.filename)?.write_all(new_content.as_bytes())?;
 
     Ok(())
+}
+
+fn replace_containing_scope(
+    contents: &str,
+    range: RangeInclusive<FileLocation>,
+    replace_fn: impl FnOnce(&str) -> String,
+) -> Result<String, Error> {
+    let start_index = range.start().index(contents)?;
+    let end_index = range.end().index(contents)?;
+    let range = start_index..(end_index + 1);
+    Ok(contents
+        .replace_range(containing_scope(contents, range), replace_fn)
+        .unwrap())
 }
