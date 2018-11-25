@@ -3,8 +3,13 @@ extern crate failure;
 extern crate regex;
 extern crate structopt;
 
+mod containing_scope;
 mod file_location;
+mod replace_range;
+
+use self::containing_scope::*;
 use self::file_location::{get, parse_range};
+use self::replace_range::*;
 
 use failure::Error;
 use std::fs::File;
@@ -19,7 +24,7 @@ struct Options {
     range: String,
 
     #[structopt(subcommand)]
-    refactor2: Refactor,
+    refactor: Refactor,
 }
 
 #[derive(StructOpt)]
@@ -46,7 +51,7 @@ fn main() -> Result<(), Error> {
     let (start, end) = parse_range(&options.range)?;
     let range_content = get(&contents, start..=end)?;
 
-    let new_content = match &options.refactor2 {
+    let new_content = match &options.refactor {
         Refactor::ExtractVariable { new_name } => {
             let expression = range_content;
             let variable_declaration = format!("let {} = {};", new_name, expression);
@@ -66,8 +71,14 @@ fn main() -> Result<(), Error> {
             lines.join("\n")
         }
         Refactor::RenameVariable { new_name } => {
-            let old_name = range_content;
-            contents.replace(old_name, new_name)
+            let start_index = start.index(&contents)?;
+            let end_index = end.index(&contents)?;
+            let input_range = start_index..(end_index + 1);
+            contents
+                .replace_range(containing_scope(&contents, input_range), |s| {
+                    s.replace(range_content, new_name)
+                })
+                .unwrap()
         }
         Refactor::InlineVariable => {
             let variable_name = range_content;
