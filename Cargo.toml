@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Shelby Doolittle <shelby@shelbyd.com>"]
 
 [dependencies]
+crates_io_api = "*"
 failure = "*"
 regex = "*"
 structopt = "*"
+walkdir = "*"
+
+[dependencies.shell]
+git = "https://github.com/google/rust-shell"
