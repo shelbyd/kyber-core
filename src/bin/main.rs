@@ -1,15 +1,10 @@
-#[macro_use]
 extern crate failure;
-extern crate regex;
+extern crate kyber;
 extern crate structopt;
 
-mod containing_scope;
-mod file_location;
-mod replace_range;
-
-use self::containing_scope::*;
-use self::file_location::{get, parse_range, FileLocation};
-use self::replace_range::*;
+use kyber::containing_scope::*;
+use kyber::file_location::{get, parse_range, FileLocation};
+use kyber::replace_range::*;
 
 use failure::Error;
 use std::fs::File;
