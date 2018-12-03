@@ -1,12 +1,15 @@
 extern crate crates_io_api;
 extern crate failure;
+extern crate kyber;
 extern crate regex;
 #[macro_use]
 extern crate shell;
 extern crate walkdir;
 
 use failure::Error;
-use std::io::Read;
+use kyber::refactoring::inline_variable;
+use std::fs::File;
+use std::io::{Read, Write};
 use std::iter::DoubleEndedIterator;
 use walkdir::{DirEntry, WalkDir};
 
@@ -32,8 +35,6 @@ fn main() -> Result<(), Error> {
         cmd!("cargo test").run().unwrap();
 
         for entry in rust_files_pwd() {
-            eprintln!("entry: {:#?}", entry);
-
             let contents = {
                 let mut s = String::new();
                 std::fs::File::open(entry.path())?.read_to_string(&mut s)?;
@@ -42,9 +43,18 @@ fn main() -> Result<(), Error> {
 
             let var_regex = regex::Regex::new(r"let ([^ ]+) = .*;").unwrap();
             for capture in var_regex.captures_iter(&contents) {
-                eprintln!("&capture[0]: {:#?}", &capture[0]);
-                eprintln!("&capture[1]: {:#?}", &capture[1]);
-                unimplemented!();
+                let re_match = capture.get(1).unwrap();
+
+                let new_contents =
+                    inline_variable(&contents, re_match.start(), re_match.end() - 1)?;
+                File::create(entry.path())?.write(&new_contents.as_bytes())?;
+
+                if let Err(e) = cmd!("cargo test").run() {
+                    eprintln!("failed inlining: {}", &capture[0]);
+                    panic!("test failed: {:?}", e);
+                }
+
+                File::create(entry.path())?.write(&contents.as_bytes())?;
             }
         }
     }

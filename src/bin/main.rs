@@ -72,17 +72,11 @@ fn main() -> Result<(), Error> {
                 s.replace(range_content, new_name)
             })?
         }
-        Refactor::InlineVariable => {
-            let variable_name = range_content;
-            let expression_matcher =
-                regex::Regex::new(&format!("let {} = (?P<expr>.+);", variable_name))?;
-            replace_containing_scope(&contents, start..=end, |s| {
-                let expression = &expression_matcher.captures(&s).unwrap()["expr"];
-                expression_matcher
-                    .replace(&s, "")
-                    .replace(variable_name, expression)
-            })?
-        }
+        Refactor::InlineVariable => kyber::refactoring::inline_variable(
+            &contents,
+            start.index(&contents)?,
+            end.index(&contents)?,
+        )?,
     };
 
     File::create(&options.filename)?.write_all(new_content.as_bytes())?;

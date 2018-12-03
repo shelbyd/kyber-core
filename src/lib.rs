@@ -5,4 +5,5 @@ extern crate structopt;
 
 pub mod containing_scope;
 pub mod file_location;
+pub mod refactoring;
 pub mod replace_range;
