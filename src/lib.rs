@@ -7,3 +7,4 @@ pub mod containing_scope;
 pub mod file_location;
 pub mod refactoring;
 pub mod replace_range;
+pub mod selected_str;
