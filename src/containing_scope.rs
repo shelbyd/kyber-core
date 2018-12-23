@@ -1,41 +1,39 @@
 use std::ops::Range;
 
 pub fn containing_scope(s: &str, input_range: Range<usize>) -> Range<usize> {
-    let mut scope_depth = 0;
-    let start_index = s[..input_range.start]
-        .rmatch_indices(|c| {
-            if c == '}' {
-                scope_depth += 1;
-            } else if c == '{' {
-                if scope_depth == 0 {
-                    return true;
-                }
-                scope_depth -= 1;
-            }
-            false
-        })
+    let opening_brace = s[..input_range.start]
+        .rmatch_indices(matching_braces('{', '}'))
         .map(|(i, _)| i + 1)
         .next()
         .unwrap_or(0);
 
-    let mut scope_depth = 0;
-    let end_index = s[input_range.end..]
-        .match_indices(|c| {
-            if c == '{' {
-                scope_depth += 1;
-            } else if c == '}' {
-                if scope_depth == 0 {
-                    return true;
-                }
-                scope_depth -= 1;
-            }
-            false
-        })
+    let closing_brace = s[input_range.end..]
+        .match_indices(matching_braces('}', '{'))
         .map(|(i, _)| i + input_range.end)
         .next()
         .unwrap_or(s.len());
 
-    start_index..end_index
+    opening_brace..closing_brace
+}
+
+fn matching_braces(target: char, inverse: char) -> impl FnMut(char) -> bool {
+    let mut depth = 0;
+    move |c: char| {
+        if c == target && depth == 0 {
+            return true;
+        }
+
+        let d_depth = if c == inverse {
+            1
+        } else if c == target {
+            -1
+        } else {
+            0
+        };
+        depth += d_depth;
+
+        false
+    }
 }
 
 #[cfg(test)]
@@ -78,12 +76,29 @@ mod tests {
             "let foo = 5;{}"
         );
     }
-
     #[test]
     fn with_outer_brace_before() {
         assert_eq!(
             containing_scope_selected("{}{let `foo` = 5;}"),
             "let foo = 5;"
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn with_closing_brace_inside() {
+        assert_eq!(
+            containing_scope_selected("{{let `f}oo` = 5;}"),
+            "{let f}oo = 5;"
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn with_opening_brace_inside() {
+        assert_eq!(
+            containing_scope_selected("{let `f{oo` = 5;}}"),
+            "let f{oo = 5;}"
         );
     }
 }
