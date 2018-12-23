@@ -3,33 +3,47 @@ use std::str::FromStr;
 
 pub struct SelectedStr<S: AsRef<str>> {
     s: S,
-    selection: Range<usize>,
+    range: Range<usize>,
 }
 
 impl<S: AsRef<str>> SelectedStr<S> {
-    fn new<R: RangeBounds<usize>>(s: S, selection: R) -> SelectedStr<S> {
-        let start = match selection.start_bound() {
+    pub fn new<R: RangeBounds<usize>>(s: S, range: R) -> SelectedStr<S> {
+        let start = match range.start_bound() {
             Bound::Included(s) => *s,
             Bound::Excluded(s) => s + 1,
             Bound::Unbounded => 0,
         };
-        let end = match selection.end_bound() {
+        let end = match range.end_bound() {
             Bound::Excluded(s) => *s,
             Bound::Included(s) => s + 1,
             Bound::Unbounded => s.as_ref().len(),
         };
         SelectedStr {
             s,
-            selection: start..end,
+            range: start..end,
         }
     }
 
-    fn range_str(&self) -> &str {
-        &self.s.as_ref()[self.selection.clone()]
+    pub fn range_str(&self) -> &str {
+        &self.s.as_ref()[self.range.clone()]
     }
 
-    fn as_str(&self) -> &str {
+    pub fn range(&self) -> Range<usize> {
+        self.range.clone()
+    }
+
+    pub fn as_str(&self) -> &str {
         &self.s.as_ref()
+    }
+
+    pub fn with_range(&self, range: Range<usize>) -> SelectedStr<S>
+    where
+        S: Clone,
+    {
+        SelectedStr {
+            range,
+            s: self.s.clone(),
+        }
     }
 }
 
@@ -43,7 +57,7 @@ impl FromStr for SelectedStr<String> {
             let end = match_indices[1].0 - 1;
             Ok(SelectedStr {
                 s: s.replace("`", "").to_string(),
-                selection: start..end,
+                range: start..end,
             })
         } else {
             Err(())

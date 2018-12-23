@@ -41,29 +41,49 @@ pub fn containing_scope(s: &str, input_range: Range<usize>) -> Range<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::selected_str::SelectedStr;
+
+    fn containing_scope_selected(s: &str) -> String {
+        let selected = &s.parse::<SelectedStr<_>>().unwrap();
+        let scope = containing_scope(selected.as_str(), selected.range());
+        let selected = selected.with_range(scope);
+        selected.range_str().to_string()
+    }
 
     #[test]
     fn whole_file() {
-        assert_eq!(containing_scope("let foo = 5;", 4..7), 0..12);
+        assert_eq!(containing_scope_selected("let `foo` = 5;"), "let foo = 5;");
     }
 
     #[test]
     fn inside_single_brace() {
-        assert_eq!(containing_scope("{let foo = 5;}", 5..8), 1..13);
+        assert_eq!(
+            containing_scope_selected("{let `foo` = 5;}"),
+            "let foo = 5;"
+        );
     }
 
     #[test]
     fn with_brace_before() {
-        assert_eq!(containing_scope("{{}let foo = 5;}", 7..10), 1..15);
+        assert_eq!(
+            containing_scope_selected("{{}let `foo` = 5;}"),
+            "{}let foo = 5;"
+        );
     }
 
     #[test]
     fn with_brace_after() {
-        assert_eq!(containing_scope("{let foo = 5;{}}", 5..8), 1..15);
+        assert_eq!(
+            containing_scope_selected("{let `foo` = 5;{}}"),
+            "let foo = 5;{}"
+        );
     }
 
     #[test]
     fn with_outer_brace_before() {
-        assert_eq!(containing_scope("{}{let foo = 5;}", 7..10), 3..15);
+        assert_eq!(
+            containing_scope_selected("{}{let `foo` = 5;}"),
+            "let foo = 5;"
+        );
     }
 }
